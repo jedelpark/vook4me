@@ -6,9 +6,8 @@ final class ReleaseSmokeTests: XCTestCase {
     func testCaptureSaveCancelAndToolbar() throws {
         continueAfterFailure = false
         try XCTSkipUnless(NSUserName() == "runner", "Only runs on the isolated hosted runner")
-        // XCTest's runner is sandboxed, so NSHomeDirectory() refers to its container.
-        let userHome = try XCTUnwrap(NSHomeDirectoryForUser(NSUserName()))
-        let vault = URL(fileURLWithPath: userHome).appendingPathComponent("VookReleaseFixture")
+        // Prepared by the workflow outside XCTest's redirected home directory.
+        let vault = URL(fileURLWithPath: "/Users/runner/VookReleaseFixture")
         XCTAssertTrue(FileManager.default.fileExists(atPath: vault.appendingPathComponent(".ci-owned").path),
                       "Missing owned fixture at \(vault.path); test container: \(NSHomeDirectory())")
         let app = XCUIApplication(bundleIdentifier: "com.vook4me.app")
