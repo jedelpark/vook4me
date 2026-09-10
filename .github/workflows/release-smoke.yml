@@ -19,7 +19,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p validation
-          for file in run-release-smoke.sh ReleaseSmokeTests.swift voiceover-smoke.py \
+          for file in run-release-smoke.sh ReleaseSmokeTests.swift \
             VookReleaseSmoke.xcodeproj/project.pbxproj \
             VookReleaseSmoke.xcodeproj/xcshareddata/xcschemes/VookReleaseSmoke.xcscheme; do
             mkdir -p "validation/$(dirname "$file")"
@@ -32,10 +32,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash validation/run-release-smoke.sh
-      - name: Observe native VoiceOver output
-        if: always()
-        shell: bash
-        run: python3 validation/voiceover-smoke.py
       - name: Preserve synthetic test evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

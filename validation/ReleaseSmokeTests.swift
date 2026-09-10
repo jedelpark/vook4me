@@ -48,11 +48,7 @@ final class ReleaseSmokeTests: XCTestCase {
         XCTAssertEqual(try memoFiles(in: vault).count, 1)
         capture(app, "manager-after-cancel")
 
-        let applicationURL = try XCTUnwrap(NSRunningApplication.runningApplications(withBundleIdentifier: "com.vook4me.app").first?.bundleURL)
-        app.terminate()
-        app.launch()
-        _ = try await NSWorkspace.shared.openApplication(at: applicationURL, configuration: .init())
-        XCTAssertTrue(add.waitForExistence(timeout: 15), app.debugDescription)
+        try await restartManager(app)
         XCTAssertEqual(try memoFiles(in: vault).count, 1)
         let restored = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", memo)).firstMatch
         XCTAssertTrue(restored.waitForExistence(timeout: 10), app.debugDescription)
@@ -80,10 +76,19 @@ final class ReleaseSmokeTests: XCTestCase {
         let korean = try XCTUnwrap(sources.first, "Built-in Korean input source is required")
         XCTAssertEqual(TISEnableInputSource(korean), noErr)
         XCTAssertEqual(TISSelectInputSource(korean), noErr)
-        // Individual keys use XCTest's authorized event driver, not Unicode insertion or direct CGEvent posting.
-        for key in ["r", "k", "s"] {
-            input.typeKey(XCUIKeyboardKey(rawValue: key), modifierFlags: [])
+        // Switch the active app's source through the system shortcut if the first source was not applied there.
+        for attempt in 0..<3 {
+            if attempt > 0 {
+                input.typeKey("a", modifierFlags: [.command])
+                input.typeKey(.delete, modifierFlags: [])
+                input.typeKey(" ", modifierFlags: [.control, .option])
+            }
+            for key in ["r", "k", "s"] {
+                input.typeKey(XCUIKeyboardKey(rawValue: key), modifierFlags: [])
+            }
+            if input.value as? String == "간" { break }
         }
+        capture(app, "ime-input-observed")
         let composed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "간"), object: input)
         XCTAssertEqual(XCTWaiter.wait(for: [composed], timeout: 5), .completed, input.debugDescription)
         capture(app, "ime-composing")
@@ -92,6 +97,61 @@ final class ReleaseSmokeTests: XCTestCase {
         capture(app, "ime-after-first-escape")
         input.typeKey(.escape, modifierFlags: [])
         XCTAssertTrue(add.waitForExistence(timeout: 10), app.debugDescription)
+    }
+
+    @MainActor
+    func testKeyboardCapture() async throws {
+        continueAfterFailure = false
+        try XCTSkipUnless(NSUserName() == "runner", "Only runs on the isolated hosted runner")
+        let app = XCUIApplication(bundleIdentifier: "com.vook4me.app")
+        try await restartManager(app)
+        let vault = URL(fileURLWithPath: "/Users/runner/VookReleaseFixture")
+        let before = try memoFiles(in: vault).count
+        app.typeKey(",", modifierFlags: [.command, .option])
+        let input = app.textFields["Quick add bookmark or note"].firstMatch
+        XCTAssertTrue(input.waitForExistence(timeout: 10), app.debugDescription)
+        input.typeText("CI keyboard capture\n")
+        XCTAssertTrue(app.buttons["Add bookmark or memo"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(try memoFiles(in: vault).count, before + 1)
+        capture(app, "keyboard-capture-saved")
+    }
+
+    @MainActor
+    func testVoiceOverNavigation() async throws {
+        continueAfterFailure = false
+        try XCTSkipUnless(NSUserName() == "runner", "Only runs on the isolated hosted runner")
+        let app = XCUIApplication(bundleIdentifier: "com.vook4me.app")
+        try await restartManager(app)
+        app.typeKey("h", modifierFlags: [.command])
+        _ = try await NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: "/System/Library/CoreServices/VoiceOver.app"), configuration: .init())
+        let voiceOver = XCUIApplication(bundleIdentifier: "com.apple.VoiceOver")
+        let use = voiceOver.buttons["Use VoiceOver"].firstMatch
+        if use.waitForExistence(timeout: 8) { use.click() }
+        let f5 = XCUIKeyboardKey.F5
+        let f10 = XCUIKeyboardKey.F10
+        defer {
+            if NSWorkspace.shared.isVoiceOverEnabled {
+                app.typeKey(f5, modifierFlags: [.command])
+            }
+        }
+        captureDesktop("voiceover-started")
+        XCTAssertTrue(NSWorkspace.shared.isVoiceOverEnabled)
+        app.activate()
+        // Caption visibility is a toggle; both states are captured to avoid assuming the image default.
+        for phase in 0..<2 {
+            app.typeKey(f10, modifierFlags: [.control, .option, .command])
+            for step in 0..<3 {
+                app.typeKey(.rightArrow, modifierFlags: [.control, .option])
+                try await Task.sleep(nanoseconds: 500_000_000)
+                captureDesktop("voiceover-navigation-\(phase)-\(step)")
+            }
+        }
+        app.typeKey("u", modifierFlags: [.control, .option])
+        captureDesktop("voiceover-rotor-request")
+        app.typeKey(.escape, modifierFlags: [])
+        app.typeKey("i", modifierFlags: [.control, .option])
+        captureDesktop("voiceover-item-chooser-request")
+        // Speech/caption and rotor behavior require inspection of these actual captures.
     }
 
     private func memoFiles(in root: URL) throws -> [URL] {
@@ -103,8 +163,25 @@ final class ReleaseSmokeTests: XCTestCase {
     }
 
     @MainActor
+    private func restartManager(_ app: XCUIApplication) async throws {
+        let url = try XCTUnwrap(NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.vook4me.app"))
+        app.terminate()
+        app.launch()
+        _ = try await NSWorkspace.shared.openApplication(at: url, configuration: .init())
+        XCTAssertTrue(app.buttons["Add bookmark or memo"].waitForExistence(timeout: 15), app.debugDescription)
+    }
+
+    @MainActor
     private func capture(_ app: XCUIApplication, _ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
+    private func captureDesktop(_ name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)

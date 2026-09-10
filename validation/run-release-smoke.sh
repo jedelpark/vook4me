@@ -9,11 +9,11 @@ mkdir -p "$CI_SMOKE_ROOT/download" "$CI_SMOKE_ROOT/results" "$CI_SMOKE_ROOT/moun
 sw_vers
 uname -m
 xcodebuild -version
-gh release download v1.8.4 --repo jedelpark/vook4me --pattern Vook4Me-1.8.4.dmg --dir "$CI_SMOKE_ROOT/download"
+gh release download v1.8.4 --repo jedelpark/vook4me --pattern Vook4Me-1.8.4-20260910.1.dmg --dir "$CI_SMOKE_ROOT/download"
 unset GH_TOKEN GITHUB_TOKEN
-echo 'b0b0b4c3f470616ab10aaa1213c35457e750ba66b28f76af2c8a069693f745ca  Vook4Me-1.8.4.dmg' > "$CI_SMOKE_ROOT/download/SHA256SUMS"
+echo 'c531a5811f22b7b87be1ebb0a976c7dfef956627dc0ee15f4adb2245cfc13270  Vook4Me-1.8.4-20260910.1.dmg' > "$CI_SMOKE_ROOT/download/SHA256SUMS"
 (cd "$CI_SMOKE_ROOT/download" && shasum -a 256 -c SHA256SUMS)
-hdiutil attach -readonly -nobrowse -mountpoint "$CI_SMOKE_ROOT/mount" "$CI_SMOKE_ROOT/download/Vook4Me-1.8.4.dmg"
+hdiutil attach -readonly -nobrowse -mountpoint "$CI_SMOKE_ROOT/mount" "$CI_SMOKE_ROOT/download/Vook4Me-1.8.4-20260910.1.dmg"
 trap 'hdiutil detach "$CI_SMOKE_ROOT/mount" >/dev/null 2>&1 || true' EXIT
 ditto "$CI_SMOKE_ROOT/mount/Vook4Me.app" "$CI_SMOKE_ROOT/Vook4Me.app"
 hdiutil detach "$CI_SMOKE_ROOT/mount"
