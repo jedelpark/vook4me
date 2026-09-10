@@ -9,7 +9,6 @@ mkdir -p "$CI_SMOKE_ROOT/download" "$CI_SMOKE_ROOT/results" "$CI_SMOKE_ROOT/moun
 sw_vers
 uname -m
 xcodebuild -version
-command -v xcodegen
 gh release download v1.8.4 --repo jedelpark/vook4me --pattern Vook4Me-1.8.4.dmg --dir "$CI_SMOKE_ROOT/download"
 unset GH_TOKEN GITHUB_TOKEN
 echo 'b0b0b4c3f470616ab10aaa1213c35457e750ba66b28f76af2c8a069693f745ca  Vook4Me-1.8.4.dmg' > "$CI_SMOKE_ROOT/download/SHA256SUMS"
@@ -32,28 +31,7 @@ defaults write com.vook4me.app remoteFaviconsEnabled -bool false
 defaults write com.vook4me.app hideDockIcon -bool false
 defaults write com.vook4me.app SUEnableAutomaticChecks -bool false
 cp validation/ReleaseSmokeTests.swift "$CI_SMOKE_ROOT/ReleaseSmokeTests.swift"
-cat > "$CI_SMOKE_ROOT/project.yml" <<'YAML'
-name: VookReleaseSmoke
-targets:
-  ReleaseSmokeTests:
-    type: bundle.ui-testing
-    platform: macOS
-    deploymentTarget: '14.0'
-    sources: [ReleaseSmokeTests.swift]
-    settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.vook4me.ci.smoke
-      GENERATE_INFOPLIST_FILE: YES
-      CODE_SIGN_IDENTITY: '-'
-      CODE_SIGN_STYLE: Manual
-schemes:
-  VookReleaseSmoke:
-    build:
-      targets:
-        ReleaseSmokeTests: [test]
-    test:
-      targets: [ReleaseSmokeTests]
-YAML
-xcodegen generate --spec "$CI_SMOKE_ROOT/project.yml" --project "$CI_SMOKE_ROOT"
+cp -R validation/VookReleaseSmoke.xcodeproj "$CI_SMOKE_ROOT/"
 open -a "$CI_SMOKE_ROOT/Vook4Me.app"
 sleep 3
 open -a "$CI_SMOKE_ROOT/Vook4Me.app"

@@ -17,7 +17,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p validation
-          for file in run-release-smoke.sh ReleaseSmokeTests.swift; do
+          for file in run-release-smoke.sh ReleaseSmokeTests.swift \
+            VookReleaseSmoke.xcodeproj/project.pbxproj \
+            VookReleaseSmoke.xcodeproj/xcshareddata/xcschemes/VookReleaseSmoke.xcscheme; do
+            mkdir -p "validation/$(dirname "$file")"
             curl --fail --silent --show-error --location \
               "https://raw.githubusercontent.com/jedelpark/vook4me/$GITHUB_SHA/validation/$file" \
               --output "validation/$file"
