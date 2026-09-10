@@ -1,0 +1,37 @@
+name: Release compatibility smoke
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release-smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Fetch reviewed validation files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation
+          for file in run-release-smoke.sh ReleaseSmokeTests.swift; do
+            curl --fail --silent --show-error --location \
+              "https://raw.githubusercontent.com/jedelpark/vook4me/$GITHUB_SHA/validation/$file" \
+              --output "validation/$file"
+          done
+      - name: Verify release and exercise native UI
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash validation/run-release-smoke.sh
+      - name: Preserve synthetic test evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-smoke-${{ matrix.os }}
+          path: ${{ runner.temp }}/vook-release-smoke/results
+          retention-days: 3
+          if-no-files-found: warn
