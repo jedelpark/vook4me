@@ -5,6 +5,12 @@ final class ReleaseSmokeTests: XCTestCase {
     @MainActor
     func testCaptureSaveCancelAndToolbar() throws {
         continueAfterFailure = false
+        try XCTSkipUnless(NSUserName() == "runner", "Only runs on the isolated hosted runner")
+        // XCTest's runner is sandboxed, so NSHomeDirectory() refers to its container.
+        let userHome = try XCTUnwrap(NSHomeDirectoryForUser(NSUserName()))
+        let vault = URL(fileURLWithPath: userHome).appendingPathComponent("VookReleaseFixture")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: vault.appendingPathComponent(".ci-owned").path),
+                      "Missing owned fixture at \(vault.path); test container: \(NSHomeDirectory())")
         let app = XCUIApplication(bundleIdentifier: "com.vook4me.app")
         app.activate()
         let add = app.buttons["Add bookmark or memo"].firstMatch
@@ -18,8 +24,6 @@ final class ReleaseSmokeTests: XCTestCase {
         capture(app, "manager-before")
 
         // This suite runs only on a fresh hosted VM with a synthetic vault.
-        let vault = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("VookReleaseFixture")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: vault.appendingPathComponent(".ci-owned").path))
         NSPasteboard.general.clearContents()
         let memo = "CI release note 20260909.5"
         add.click()
