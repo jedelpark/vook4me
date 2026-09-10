@@ -80,15 +80,9 @@ final class ReleaseSmokeTests: XCTestCase {
         let korean = try XCTUnwrap(sources.first, "Built-in Korean input source is required")
         XCTAssertEqual(TISEnableInputSource(korean), noErr)
         XCTAssertEqual(TISSelectInputSource(korean), noErr)
-        let pid = try XCTUnwrap(NSRunningApplication.runningApplications(withBundleIdentifier: "com.vook4me.app").first?.processIdentifier)
-        // Physical R/K/S keys produce an uncommitted Korean syllable; Unicode text injection would not test IME.
-        for code: CGKeyCode in [15, 40, 1] {
-            for down in [true, false] {
-                let event = try XCTUnwrap(CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down))
-                event.flags = []
-                event.postToPid(pid)
-                usleep(80_000)
-            }
+        // Individual keys use XCTest's authorized event driver, not Unicode insertion or direct CGEvent posting.
+        for key in ["r", "k", "s"] {
+            input.typeKey(XCUIKeyboardKey(rawValue: key), modifierFlags: [])
         }
         let composed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "간"), object: input)
         XCTAssertEqual(XCTWaiter.wait(for: [composed], timeout: 5), .completed, input.debugDescription)

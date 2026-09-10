@@ -21,6 +21,7 @@ trap - EXIT
 codesign --verify --deep --strict "$CI_SMOKE_ROOT/Vook4Me.app"
 xcrun stapler validate "$CI_SMOKE_ROOT/Vook4Me.app"
 spctl --assess --type execute "$CI_SMOKE_ROOT/Vook4Me.app"
+touch "$CI_SMOKE_ROOT/results/app-verified.flag"
 CI_FIXTURE_VAULT=$(python3 -c 'from pathlib import Path; print(Path.home()/"VookReleaseFixture")')
 mkdir -p "$CI_FIXTURE_VAULT"
 touch "$CI_FIXTURE_VAULT/.ci-owned"
