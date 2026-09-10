@@ -10,8 +10,8 @@ final class ReleaseSmokeTests: XCTestCase {
         let add = app.buttons["Add bookmark or memo"].firstMatch
         XCTAssertTrue(add.waitForExistence(timeout: 20), app.debugDescription)
 
-        let viewMenu = app.menuButtons["Change view"].firstMatch
-        let sortMenu = app.menuButtons["Sort bookmarks"].firstMatch
+        let viewMenu = app.descendants(matching: .any)["Change view"].firstMatch
+        let sortMenu = app.descendants(matching: .any)["Sort bookmarks"].firstMatch
         XCTAssertTrue(viewMenu.exists && sortMenu.exists, app.debugDescription)
         XCTAssertEqual(viewMenu.frame.width, sortMenu.frame.width, accuracy: 0.5)
         XCTAssertEqual(viewMenu.frame.height, sortMenu.frame.height, accuracy: 0.5)
