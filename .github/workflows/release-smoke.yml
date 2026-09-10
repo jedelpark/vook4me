@@ -2,7 +2,9 @@ name: Release compatibility smoke
 on:
   workflow_dispatch:
 permissions:
-  contents: read
+  # GitHub restricts draft release visibility to identities with push access.
+  # The short-lived token is removed before the app or UI tests run.
+  contents: write
 jobs:
   release-smoke:
     strategy:
