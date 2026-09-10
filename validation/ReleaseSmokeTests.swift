@@ -73,6 +73,9 @@ final class ReleaseSmokeTests: XCTestCase {
         input.click()
         let previous = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
         defer { TISSelectInputSource(previous) }
+        // TextInputSources.h requires enabling the parent method before an input mode.
+        let methods = TISCreateInputSourceList([kTISPropertyInputSourceID as String: "com.apple.inputmethod.Korean"] as CFDictionary, true).takeRetainedValue() as! [TISInputSource]
+        XCTAssertEqual(TISEnableInputSource(try XCTUnwrap(methods.first)), noErr)
         let sources = TISCreateInputSourceList([kTISPropertyInputSourceID as String: "com.apple.inputmethod.Korean.2SetKorean"] as CFDictionary, true).takeRetainedValue() as! [TISInputSource]
         let korean = try XCTUnwrap(sources.first, "Built-in Korean input source is required")
         XCTAssertEqual(TISEnableInputSource(korean), noErr)
